@@ -97,7 +97,7 @@ export const App: React.FC = () => {
             onClick={() => setActiveTab("diff")}
           >
             <span className="tab-icon"><DiffTabIcon /></span>
-            <span>Diff</span>
+            <span>Changes</span>
           </button>
         </div>
       </header>

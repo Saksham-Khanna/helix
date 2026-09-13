@@ -61,19 +61,6 @@ export const DiffViewer: React.FC<Props> = ({
 
   const monacoTheme = theme.isDark ? "vs-dark" : "light";
 
-  // Parse workspace diff into human summary — easy to understand
-  const diffStats = React.useMemo(() => {
-    if (!workspaceDiff.trim() || hasDirectDiff) return null;
-    const files = [...workspaceDiff.matchAll(/^diff --git a\/(.+?) b\//gm)].map((m) => m[1]);
-    let added = 0, removed = 0;
-    for (const line of workspaceDiff.split("\n")) {
-      if (line.startsWith("+++") || line.startsWith("---") || line.startsWith("@@")) continue;
-      if (line.startsWith("+")) added++;
-      else if (line.startsWith("-")) removed++;
-    }
-    return { files, fileCount: files.length, added, removed };
-  }, [workspaceDiff, hasDirectDiff]);
-
   // Determine language for file diff
   const ext = filePath?.split(".").pop()?.toLowerCase();
   const langMap: Record<string, string> = {
@@ -117,19 +104,8 @@ const CheckIcon = () => (
       <div className="diff-viewer-bar">
         <div className="diff-viewer-info">
           <span className="diff-viewer-title">
-            {hasDirectDiff
-              ? `Diff: ${filePath || "Current Changes"}`
-              : "Workspace Changes"}
+            {hasDirectDiff ? `Diff: ${filePath || "Current Changes"}` : "Changes"}
           </span>
-          {!hasDirectDiff && diffStats && diffStats.fileCount > 0 && (
-            <span style={{ marginLeft: 10, fontSize: 11, color: "var(--fg-muted)" }}>
-              <span style={{ color: "#4ec9b0" }}>+{diffStats.added}</span>
-              {" / "}
-              <span style={{ color: "#f14c4c" }}>-{diffStats.removed}</span>
-              {" • "}
-              {diffStats.fileCount} file{diffStats.fileCount > 1 ? "s" : ""} changed
-            </span>
-          )}
         </div>
         <div className="diff-viewer-actions">
           {hasDirectDiff && (
@@ -175,52 +151,27 @@ const CheckIcon = () => (
             }}
           />
         ) : workspaceDiff.trim() ? (
-          <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-            {diffStats && (
-              <div style={{ padding: "8px 12px", background: "var(--card-bg)", borderBottom: "1px solid var(--border-color)", fontSize: 12, lineHeight: 1.6 }}>
-                <div style={{ fontWeight: 600, marginBottom: 4 }}>Summary — easy to read:</div>
-                {diffStats.files.length > 0 ? (
-                  <ul style={{ margin: "4px 0 6px 18px", padding: 0 }}>
-                    {diffStats.files.map((f) => (
-                      <li key={f} style={{ marginBottom: 2 }}><code style={{ background: "rgba(128,128,128,0.15)", padding: "1px 4px", borderRadius: 3 }}>{f}</code> — changed</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div>Files changed</div>
-                )}
-                <div style={{ color: "var(--fg-muted)", fontSize: 11 }}>
-                  <span style={{ color: "#4ec9b0", fontWeight: 600 }}>+{diffStats.added} lines added</span>
-                  {"  "} <span style={{ color: "#f14c4c", fontWeight: 600 }}>-{diffStats.removed} lines removed</span>
-                  <br />
-                  <span>Green `+` = naya code, Red `-` = hata hua code. Har file ka diff neeche dikh raha hai.</span>
-                </div>
-              </div>
-            )}
-            <div style={{ flex: 1, minHeight: 0 }}>
-              <Editor
-                height="100%"
-                language="diff"
-                theme={monacoTheme}
-                value={workspaceDiff}
-                options={{
-                  readOnly: true,
-                  automaticLayout: true,
-                  minimap: { enabled: false },
-                  fontSize: 13,
-                  fontFamily: "var(--vscode-editor-font-family, Consolas, monospace)",
-                  scrollBeyondLastLine: false,
-                  wordWrap: "on",
-                }}
-              />
-            </div>
-          </div>
+          <Editor
+            height="100%"
+            language="diff"
+            theme={monacoTheme}
+            value={workspaceDiff}
+            options={{
+              readOnly: true,
+              automaticLayout: true,
+              minimap: { enabled: false },
+              fontSize: 13,
+              fontFamily: "var(--vscode-editor-font-family, Consolas, monospace)",
+              scrollBeyondLastLine: false,
+              wordWrap: "on",
+            }}
+          />
         ) : (
           <div className="diff-empty">
             <div className="diff-empty-icon"><CheckIcon /></div>
-            <p>No changes detected.</p>
+            <p>Koi changes nahi hain — workspace clean hai.</p>
             <p className="diff-empty-hint">
-              Workspace matches the latest saved state.<br />
-              Agent jab `edit_file` / `write_file` karega to yahan file list + green/red diff ayega.
+              Agent jab edit karega to yahan diff dikhega.
             </p>
           </div>
         )}
