@@ -2,8 +2,16 @@
   "name": "helix",
   "displayName": "Helix",
   "description": "Helix — AI coding assistant with chat, file editing, diff view — powered by your own agent backend",
-  "version": "0.1.0",
-  "publisher": "agentic-ide",
+  "version": "0.2.0",
+  "publisher": "Helix-ai",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Saksham-Khanna/terminal-assistant"
+  },
+  "homepage": "https://github.com/Saksham-Khanna/terminal-assistant#readme",
+  "bugs": {
+    "url": "https://github.com/Saksham-Khanna/terminal-assistant/issues"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
