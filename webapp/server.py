@@ -100,11 +100,18 @@ async def index():
 @app.get("/api/health")
 async def health():
     config = get_config()
+    if config.provider == "ollama":
+        model = config.ollama_model
+    elif config.provider == "groq":
+        model = config.groq_model
+    else:
+        model = config.gemini_model
     return {
         "status": "ok",
         "provider": config.provider,
         "workspace": WORKSPACE_ROOT,
-        "model": config.gemini_model if config.provider == "gemini" else config.groq_model,
+        "model": model,
+        "ollama_host": config.ollama_host if config.provider == "ollama" else None,
     }
 
 

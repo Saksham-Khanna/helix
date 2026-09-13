@@ -97,7 +97,7 @@ class Agent:
     def _append_user(self, text: str):
         if not self.initial_query:
             self.initial_query = text
-        if self.provider == "groq":
+        if self.provider in ("groq", "ollama"):
             self.groq_messages.append({"role": "user", "content": text})
         else:
             self.contents.append(
@@ -105,7 +105,7 @@ class Agent:
             )
 
     def _append_model(self, text: str):
-        if self.provider == "groq":
+        if self.provider in ("groq", "ollama"):
             self.groq_messages.append({"role": "assistant", "content": text})
         else:
             self.contents.append(
@@ -136,6 +136,7 @@ class Agent:
         """Clear conversation history and start fresh."""
         self.contents = []
         self.groq_messages = []
+        self.ollama_messages = [] if hasattr(self, 'ollama_messages') else []
         self.context_chunks_used = []
         self.tools_called = []
         self.initial_query = ""
@@ -144,16 +145,17 @@ class Agent:
 
     def _record_usage(self, response) -> None:
         """Record token usage for the latest LLM call."""
-        if self.provider == "groq":
+        if self.provider in ("groq", "ollama"):
             prompt_tokens, output_tokens = estimate_groq_tokens(response)
         else:
             prompt_tokens, output_tokens = estimate_gemini_tokens(response)
 
-        model = (
-            get_config().groq_model
-            if self.provider == "groq"
-            else get_config().gemini_model
-        )
+        if self.provider == "ollama":
+            model = get_config().ollama_model
+        elif self.provider == "groq":
+            model = get_config().groq_model
+        else:
+            model = get_config().gemini_model
 
         if prompt_tokens or output_tokens:
             self.usage.record_call(
@@ -174,7 +176,7 @@ class Agent:
 
     def _maybe_summarize(self):
         """Compress old messages if context is getting too long."""
-        if self.provider == "groq":
+        if self.provider in ("groq", "ollama"):
             if should_summarize_groq(self.groq_messages):
                 self.groq_messages = summarize_groq(
                     self.llm.client if hasattr(self.llm, "client") else None,
@@ -206,6 +208,11 @@ class Agent:
 
             if self.provider == "groq":
                 self.llm.set_groq_messages(self.groq_messages)
+            elif self.provider == "ollama":
+                if hasattr(self.llm, "set_ollama_messages"):
+                    self.llm.set_ollama_messages(self.groq_messages)
+                else:
+                    self.llm.set_groq_messages(self.groq_messages)
             with print_spinner("Agent thinking..."):
                 response = self.llm.call(
                     contents=self.contents,
@@ -215,7 +222,7 @@ class Agent:
 
             self._record_usage(response)
 
-            if self.provider == "groq":
+            if self.provider in ("groq", "ollama"):
                 result = self._run_groq_iteration(response)
             else:
                 result = self._run_gemini_iteration(response)
@@ -253,8 +260,13 @@ class Agent:
 
             if self.provider == "groq":
                 self.llm.set_groq_messages(self.groq_messages)
+            elif self.provider == "ollama":
+                if hasattr(self.llm, "set_ollama_messages"):
+                    self.llm.set_ollama_messages(self.groq_messages)
+                else:
+                    self.llm.set_groq_messages(self.groq_messages)
 
-            # Use streaming (Groq falls back to non-stream on error)
+            # Use streaming (Groq/Ollama fall back to non-stream on error)
             accumulated_text = ""
             tool_calls = []
 
@@ -270,8 +282,8 @@ class Agent:
                     elif chunk["type"] == "tool_call":
                         tool_calls.append(chunk["data"])
             except Exception as e:
-                if self.provider == "groq":
-                    # Fallback to non-streaming Groq call
+                if self.provider in ("groq", "ollama"):
+                    # Fallback to non-streaming Groq/Ollama call
                     try:
                         response = self.llm.call(contents=self.contents, system=self.system, tools=TOOL_SCHEMAS)
                         result = self._run_groq_iteration(response)
@@ -314,17 +326,23 @@ class Agent:
             pricing = PRICING.get(self.provider, PRICING["gemini"])
             prompt_text = "".join(
                 p.text for c in self.contents for p in c.parts if getattr(p, "text", None)
-            ) if self.provider != "groq" else ""
-            if self.provider == "groq":
+            ) if self.provider not in ("groq", "ollama") else ""
+            if self.provider in ("groq", "ollama"):
                 prompt_tokens = estimate_tokens_char_fallback(
                     "".join(m.get("content", "") for m in self.groq_messages if isinstance(m.get("content"), str))
                 )
             else:
                 prompt_tokens = estimate_tokens_char_fallback(prompt_text)
             output_tokens = estimate_tokens_char_fallback(accumulated_text)
+            if self.provider == "ollama":
+                model_name = get_config().ollama_model
+            elif self.provider == "groq":
+                model_name = get_config().groq_model
+            else:
+                model_name = get_config().gemini_model
             self.usage.record_call(
                 provider=self.provider,
-                model=(get_config().groq_model if self.provider == "groq" else get_config().gemini_model),
+                model=model_name,
                 prompt_tokens=prompt_tokens,
                 output_tokens=output_tokens,
                 iteration=iteration,
@@ -387,7 +405,7 @@ class Agent:
                     )
                 )
 
-            if self.provider == "groq":
+            if self.provider in ("groq", "ollama"):
                 for tc, part in zip(tool_calls, response_parts):
                     self.groq_messages.append({
                         "role": "tool",
