@@ -72,6 +72,10 @@ DEFAULTS: dict[str, Any] = {
     "groq": {
         "model": "openai/gpt-oss-120b",
     },
+    "ollama": {
+        "model": "qwen2.5:7b-instruct",
+        "host": "http://localhost:11434",
+    },
 }
 
 
@@ -196,6 +200,22 @@ class Config:
         )
 
     @property
+    def ollama_model(self) -> str:
+        """Ollama model name."""
+        return os.environ.get(
+            "OLLAMA_MODEL",
+            self.section("ollama").get("model", "qwen2.5:7b-instruct"),
+        )
+
+    @property
+    def ollama_host(self) -> str:
+        """Ollama host URL."""
+        return os.environ.get(
+            "OLLAMA_HOST",
+            self.section("ollama").get("host", "http://localhost:11434"),
+        )
+
+    @property
     def has_gemini_key(self) -> bool:
         """True if GEMINI_API_KEY is set."""
         return bool(os.environ.get("GEMINI_API_KEY"))
@@ -223,6 +243,9 @@ class Config:
                 "MODEL_PROVIDER is 'groq' but GROQ_API_KEY is not set. "
                 "Add it to .env or switch provider with MODEL_PROVIDER=gemini."
             )
+        elif self.provider == "ollama":
+            # No API key needed, but check host reachable (warning only, not blocking)
+            pass
         return warnings
 
 

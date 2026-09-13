@@ -1,11 +1,12 @@
 """
 Thin wrapper around LLM APIs.
 
-Supports two providers:
+Supports three providers:
   1. Gemini (free tier, no credit card) via google.genai
   2. Groq (free API) via OpenAI-compatible chat completions
+  3. Ollama (local) via http://localhost:11434/api/chat
 
-Swap providers by setting MODEL_PROVIDER in .env ("gemini" or "groq").
+Swap providers by setting MODEL_PROVIDER in .env ("gemini", "groq" or "ollama").
 This is the only file that needs to change when swapping providers.
 """
 
@@ -30,6 +31,15 @@ def _get_gemini_model() -> str:
 
 def _get_groq_model() -> str:
     return get_config().groq_model
+
+def _get_ollama_model() -> str:
+    return get_config().ollama_model
+
+def _get_ollama_host() -> str:
+    return get_config().ollama_host.rstrip("/")
+
+def _ollama_url() -> str:
+    return f"{_get_ollama_host()}/api/chat"
 
 # Keep for backward compat – now dynamic
 _config = get_config()
@@ -146,6 +156,111 @@ def _groq_stream(messages: list, tools: list[dict], system: str) -> Generator[di
         client.close()
 
 
+def _normalize_ollama_messages(messages: list) -> list:
+    """Convert Groq-style tool_calls (arguments as JSON string) to Ollama dict format."""
+    normalized = []
+    for m in messages:
+        if not isinstance(m, dict):
+            normalized.append(m)
+            continue
+        nm = dict(m)
+        if "tool_calls" in nm and isinstance(nm["tool_calls"], list):
+            new_tcs = []
+            for tc in nm["tool_calls"]:
+                ntc = dict(tc)
+                func = dict(ntc.get("function", {}))
+                args = func.get("arguments", "")
+                if isinstance(args, str):
+                    try:
+                        func["arguments"] = json.loads(args) if args.strip() else {}
+                    except json.JSONDecodeError:
+                        func["arguments"] = {}
+                elif args is None:
+                    func["arguments"] = {}
+                ntc["function"] = func
+                new_tcs.append(ntc)
+            nm["tool_calls"] = new_tcs
+        normalized.append(nm)
+    return normalized
+
+def _ollama_request(messages: list, tools: list[dict], system: str, stream: bool = False) -> dict:
+    """Low-level Ollama call via /api/chat (OpenAI-compatible tools)."""
+    url = _ollama_url()
+    out_messages = _normalize_ollama_messages(messages)
+    payload = {
+        "model": _get_ollama_model(),
+        "messages": out_messages,
+        "stream": stream,
+    }
+    if tools:
+        payload["tools"] = tools
+    if system:
+        payload["messages"] = [{"role": "system", "content": system}] + out_messages
+
+    def _do_request():
+        with httpx.Client(timeout=120.0) as client:
+            resp = client.post(url, json=payload, headers={"User-Agent": USER_AGENT})
+            try:
+                resp.raise_for_status()
+            except httpx.HTTPStatusError as e:
+                # Surface body for debugging (Ollama 400 gives JSON error)
+                body = ""
+                try:
+                    body = resp.text
+                except Exception:
+                    pass
+                raise RuntimeError(f"Ollama API error {resp.status_code}: {body}") from e
+            return resp.json()
+
+    return with_retries(_do_request)
+
+
+def _ollama_stream(messages: list, tools: list[dict], system: str) -> Generator[dict, None, None]:
+    """Yield chunks from Ollama streaming /api/chat (ndjson)."""
+    url = _ollama_url()
+    out_messages = _normalize_ollama_messages(messages)
+    payload = {
+        "model": _get_ollama_model(),
+        "messages": out_messages,
+        "stream": True,
+    }
+    if tools:
+        payload["tools"] = tools
+    if system:
+        payload["messages"] = [{"role": "system", "content": system}] + out_messages
+
+    headers = {"Content-Type": "application/json", "User-Agent": USER_AGENT}
+
+    def _open_stream():
+        client = httpx.Client(timeout=120.0)
+        stream = client.stream("POST", url, json=payload, headers=headers)
+        try:
+            resp = stream.__enter__()
+            resp.raise_for_status()
+        except BaseException:
+            client.close()
+            raise
+        return client, resp
+
+    client, resp = with_retries(_open_stream)
+
+    try:
+        for line in resp.iter_lines():
+            if not line:
+                continue
+            try:
+                chunk = json.loads(line)
+                yield chunk
+            except json.JSONDecodeError:
+                continue
+    finally:
+        try:
+            resp.__exit__(None, None, None)
+        except BaseException:
+            pass
+        client.close()
+
+
 class LLMClient:
 
     def __init__(self, api_key: str | None = None):
@@ -155,23 +270,33 @@ class LLMClient:
             self.groq_messages = []
             return
 
+        if self.provider == "ollama":
+            self.ollama_messages = []
+            return
+
         # Default: Gemini
         api_key = api_key or os.environ.get("GEMINI_API_KEY")
         if not api_key:
             raise RuntimeError(
                 "GEMINI_API_KEY not set. Get a free key at "
                 "https://aistudio.google.com/apikey and put it in your .env file. "
-                "Or set MODEL_PROVIDER=groq and use GROQ_API_KEY instead."
+                "Or set MODEL_PROVIDER=groq and use GROQ_API_KEY instead. "
+                "Or set MODEL_PROVIDER=ollama for local Ollama (no key needed)."
             )
         self.client = genai.Client(api_key=api_key)
 
     def call(self, contents: list, system: str, tools: list[dict]) -> object:
         if self.provider == "groq":
             return self._call_groq(contents, system, tools)
+        if self.provider == "ollama":
+            return self._call_ollama(contents, system, tools)
         return self._call_gemini(contents, system, tools)
 
     def set_groq_messages(self, messages: list):
         self.groq_messages = messages
+
+    def set_ollama_messages(self, messages: list):
+        self.ollama_messages = messages
 
     # --- Gemini implementation (unchanged behavior) ---
     def _call_gemini(self, contents, system, tools):
@@ -236,15 +361,77 @@ class LLMClient:
         data = _groq_request(messages, groq_tools, system)
         return data
 
+    # --- Ollama implementation ---
+    def _call_ollama(self, contents, system, tools):
+        if getattr(self, "ollama_messages", None):
+            messages = self.ollama_messages
+        else:
+            messages = []
+            for content in contents:
+                role = content.role
+                text_parts = []
+                for part in content.parts:
+                    if getattr(part, "text", None):
+                        text_parts.append(part.text)
+                    elif getattr(part, "function_call", None):
+                        fc = part.function_call
+                        args = json.dumps(dict(fc.args), ensure_ascii=False)
+                        text_parts.append(f"tool_call({fc.name}): {args}")
+                    elif getattr(part, "function_response", None):
+                        fr = part.function_response
+                        resp = fr.response.get("result", "")
+                        text_parts.append(f"tool_result({fr.name}): {resp}")
+                if text_parts:
+                    messages.append({"role": role, "content": "\n".join(text_parts)})
+
+        ollama_tools = []
+        for t in tools:
+            ollama_tools.append({
+                "type": "function",
+                "function": {
+                    "name": t["name"],
+                    "description": t["description"],
+                    "parameters": t["input_schema"],
+                },
+            })
+
+        data = _ollama_request(messages, ollama_tools, system)
+        # Normalize Ollama response to Groq-compatible shape for Agent
+        # Ollama returns {"message": {"content": ..., "tool_calls": ...}}
+        if "message" in data and "choices" not in data:
+            msg = data.get("message", {})
+            content = msg.get("content", "")
+            tool_calls = msg.get("tool_calls") or []
+            # Convert Ollama tool_calls to Groq format
+            groq_tcs = []
+            for tc in tool_calls:
+                func = tc.get("function", {})
+                args = func.get("arguments", {})
+                if isinstance(args, dict):
+                    args_str = json.dumps(args, ensure_ascii=False)
+                else:
+                    args_str = str(args)
+                groq_tcs.append({
+                    "id": func.get("name", "") + "_0",
+                    "type": "function",
+                    "function": {"name": func.get("name", ""), "arguments": args_str}
+                })
+            return {"choices": [{"message": {"content": content, "tool_calls": groq_tcs}}]}
+        return data
+
     def call_stream(self, contents, system, tools):
         if self.provider == "groq":
             return self._call_groq(contents, system, tools)
+        if self.provider == "ollama":
+            return self._call_ollama(contents, system, tools)
         return self._call_gemini(contents, system, tools)
 
     def stream(self, contents: list, system: str, tools: list[dict]) -> Generator[dict, None, None]:
         """Yield streaming chunks. Each chunk has 'type' ('text' or 'tool_call') and 'data'."""
         if self.provider == "groq":
             yield from self._stream_groq(contents, system, tools)
+        elif self.provider == "ollama":
+            yield from self._stream_ollama(contents, system, tools)
         else:
             yield from self._stream_gemini(contents, system, tools)
 
@@ -311,6 +498,65 @@ class LLMClient:
 
         for idx in sorted(tool_calls_acc.keys()):
             tc = tool_calls_acc[idx]
+            yield {"type": "tool_call", "data": tc}
+
+    def _stream_ollama(self, contents, system, tools):
+        """Stream from Ollama, yielding text chunks and complete tool calls."""
+        if getattr(self, "ollama_messages", None):
+            messages = self.ollama_messages
+        else:
+            messages = []
+            for content in contents:
+                role = content.role
+                text_parts = []
+                for part in content.parts:
+                    if getattr(part, "text", None):
+                        text_parts.append(part.text)
+                    elif getattr(part, "function_call", None):
+                        fc = part.function_call
+                        args = json.dumps(dict(fc.args), ensure_ascii=False)
+                        text_parts.append(f"tool_call({fc.name}): {args}")
+                    elif getattr(part, "function_response", None):
+                        fr = part.function_response
+                        resp = fr.response.get("result", "")
+                        text_parts.append(f"tool_result({fr.name}): {resp}")
+                if text_parts:
+                    messages.append({"role": role, "content": "\n".join(text_parts)})
+
+        ollama_tools = []
+        for t in tools:
+            ollama_tools.append({
+                "type": "function",
+                "function": {
+                    "name": t["name"],
+                    "description": t["description"],
+                    "parameters": t["input_schema"],
+                },
+            })
+
+        tool_calls_acc = {}
+
+        for chunk in _ollama_stream(messages, ollama_tools, system):
+            msg = chunk.get("message", {})
+            if msg.get("content"):
+                yield {"type": "text", "data": msg["content"]}
+            if msg.get("tool_calls"):
+                for tc in msg["tool_calls"]:
+                    func = tc.get("function", {})
+                    name = func.get("name", "")
+                    args = func.get("arguments", {})
+                    if isinstance(args, dict):
+                        args_str = json.dumps(args, ensure_ascii=False)
+                    else:
+                        args_str = str(args)
+                    tool_calls_acc[name] = {"id": name, "name": name, "arguments": args_str}
+            if chunk.get("done") and tool_calls_acc:
+                for tc in tool_calls_acc.values():
+                    yield {"type": "tool_call", "data": tc}
+                tool_calls_acc = {}
+
+        # In case non-streaming done without done flag handling
+        for tc in tool_calls_acc.values():
             yield {"type": "tool_call", "data": tc}
 
     def _gemini_stream_factory(self, contents, system, tools):

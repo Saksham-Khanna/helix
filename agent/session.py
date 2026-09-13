@@ -80,7 +80,10 @@ class SessionManager:
                 serialized_contents.append(c)
 
         # Count turns
-        turn_count = len(agent.contents) if agent.provider != "groq" else len(agent.groq_messages)
+        if agent.provider in ("groq", "ollama"):
+            turn_count = len(getattr(agent, "groq_messages", []))
+        else:
+            turn_count = len(agent.contents)
 
         # Read existing created_at if updating
         created_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
