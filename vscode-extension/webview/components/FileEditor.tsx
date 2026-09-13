@@ -151,10 +151,17 @@ export const FileEditor: React.FC<Props> = ({
     });
   };
 
+const DocumentIcon = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+  </svg>
+);
+
   if (!filePath) {
     return (
       <div className="file-editor-empty">
-        <div className="file-editor-empty-icon">📁</div>
+        <div className="file-editor-empty-icon"><DocumentIcon /></div>
         <p>No file selected.</p>
         <p className="file-editor-empty-hint">
           Choose a file from the workspace tree to view and edit.
@@ -189,7 +196,7 @@ export const FileEditor: React.FC<Props> = ({
             disabled={!isDirty || saving || loading}
             title="Save changes (Ctrl+S)"
           >
-            {saving ? "Saving..." : "💾 Save"}
+            {saving ? "Saving..." : "Save"}
           </button>
           <button
             className="toolbar-btn"

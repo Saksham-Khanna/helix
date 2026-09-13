@@ -10,6 +10,23 @@ interface Props {
   activeSessionId?: string;
 }
 
+const RefreshIcon: React.FC<{ spinning?: boolean }> = ({ spinning }) => (
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 16 16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={spinning ? "spin-animate" : ""}
+  >
+    <path d="M2 8a6 6 0 1 1 1.76 4.24" />
+    <path d="M2 12V8h4" />
+  </svg>
+);
+
 export const SessionPicker: React.FC<Props> = ({
   backendUrl,
   token,
@@ -82,14 +99,14 @@ export const SessionPicker: React.FC<Props> = ({
           }}
           title="Manage sessions"
         >
-          🗂️ Sessions ({sessions.length})
+          Sessions ({sessions.length})
         </button>
         <button
           className="toolbar-btn"
           onClick={onNewSession}
           title="Start fresh conversation"
         >
-          ✨ New
+          + New
         </button>
         <button
           className="toolbar-btn"
@@ -100,7 +117,7 @@ export const SessionPicker: React.FC<Props> = ({
           }}
           title="Save conversation checkpoint"
         >
-          💾 Save
+          Save
         </button>
       </div>
 
@@ -140,7 +157,7 @@ export const SessionPicker: React.FC<Props> = ({
               title="Refresh sessions"
               disabled={loading}
             >
-              🔄
+              <RefreshIcon spinning={loading} />
             </button>
           </div>
           <div className="session-list">

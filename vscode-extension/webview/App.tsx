@@ -6,6 +6,26 @@ import { FileTree } from "./components/FileTree";
 import { FileEditor } from "./components/FileEditor";
 import { DiffViewer } from "./components/DiffViewer";
 
+const ChatTabIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2.5 3.5h11a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1H5.5L2.5 14.5V4.5a1 1 0 0 1 1-1z" />
+  </svg>
+);
+
+const FilesTabIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1.5 3.5h4l1.5 2h7.5v8H1.5v-10z" />
+  </svg>
+);
+
+const DiffTabIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="4.5" cy="4.5" r="2" />
+    <circle cx="11.5" cy="11.5" r="2" />
+    <path d="M4.5 6.5v5M11.5 4.5v5" strokeDasharray="2 2" />
+  </svg>
+);
+
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>("chat");
   const [backendUrl, setBackendUrl] = useState<string>("http://localhost:8000");
@@ -58,7 +78,7 @@ export const App: React.FC = () => {
             className={`tab-btn ${activeTab === "chat" ? "active" : ""}`}
             onClick={() => setActiveTab("chat")}
           >
-            <span className="tab-icon">🤖</span>
+            <span className="tab-icon"><ChatTabIcon /></span>
             <span>Chat</span>
           </button>
           <button
@@ -67,7 +87,7 @@ export const App: React.FC = () => {
             className={`tab-btn ${activeTab === "files" ? "active" : ""}`}
             onClick={() => setActiveTab("files")}
           >
-            <span className="tab-icon">📁</span>
+            <span className="tab-icon"><FilesTabIcon /></span>
             <span>Files</span>
           </button>
           <button
@@ -76,7 +96,7 @@ export const App: React.FC = () => {
             className={`tab-btn ${activeTab === "diff" ? "active" : ""}`}
             onClick={() => setActiveTab("diff")}
           >
-            <span className="tab-icon">⚡</span>
+            <span className="tab-icon"><DiffTabIcon /></span>
             <span>Diff</span>
           </button>
         </div>
@@ -96,7 +116,7 @@ export const App: React.FC = () => {
                   onClick={() => setShowTreeInEditor(!showTreeInEditor)}
                   title={showTreeInEditor ? "Hide file tree" : "Show file tree"}
                 >
-                  {showTreeInEditor ? "◀ Folders" : "▶ Folders"}
+                  {showTreeInEditor ? "‹ Folders" : "› Folders"}
                 </button>
               </div>
               {showTreeInEditor && (

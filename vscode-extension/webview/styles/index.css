@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,300..900;1,300..900&display=swap');
+
 /* ==========================================================================
    Agentic IDE Webview Stylesheet
    Designed specifically for VS Code theme compatibility & high aesthetics
@@ -90,7 +92,11 @@ html, body, #root {
 }
 
 .tab-icon {
-  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
 }
 
 .app-body {
@@ -201,26 +207,28 @@ html, body, #root {
   margin: auto;
   text-align: center;
   color: var(--fg-muted);
-  max-width: 280px;
-  padding: 24px 12px;
+  max-width: 340px;
+  padding: 40px 16px;
 }
 
-.chat-empty-icon {
-  font-size: 36px;
-  margin-bottom: 10px;
+.chat-empty-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg-main);
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
 }
 
 .chat-empty-hint {
-  font-size: 11px;
-  margin-top: 8px;
-  opacity: 0.8;
-  font-style: italic;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fg-muted);
 }
 
 .chat-input-area {
   display: flex;
   align-items: flex-end;
-  gap: 10px;
+  gap: 8px;
   padding: 12px 14px;
   border-top: 1px solid var(--border-color);
   background-color: var(--bg-main);
@@ -236,12 +244,12 @@ html, body, #root {
   background-color: var(--input-bg);
   color: var(--input-fg);
   border: 1px solid var(--input-border);
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-family: inherit;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
   font-size: 13px;
   resize: none;
-  min-height: 40px;
+  min-height: 38px;
   max-height: 150px;
   line-height: 1.5;
   outline: none;
@@ -262,16 +270,15 @@ html, body, #root {
   background-color: var(--primary-accent);
   color: var(--primary-fg);
   border: none;
-  border-radius: 10px;
-  width: 40px;
-  height: 40px;
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
   cursor: pointer;
   flex-shrink: 0;
-  transition: background-color 0.15s ease, transform 0.1s ease;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
 }
 
 .chat-send-btn:hover:not(:disabled) {
@@ -279,7 +286,7 @@ html, body, #root {
 }
 
 .chat-send-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
@@ -297,7 +304,7 @@ html, body, #root {
 
 .message-user {
   align-self: flex-end;
-  background: linear-gradient(135deg, var(--primary-accent) 0%, var(--primary-accent-hover) 100%);
+  background-color: var(--primary-accent);
   color: var(--primary-fg);
   border: 1px solid transparent;
   border-bottom-right-radius: 3px;
@@ -312,7 +319,7 @@ html, body, #root {
 
 .message-role {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--fg-muted);
@@ -320,12 +327,18 @@ html, body, #root {
 }
 
 .message-user .message-role {
-  color: rgba(255,255,255,0.85);
+  color: rgba(255,255,255,0.75);
 }
 
 .message-content {
   font-size: 13.5px;
   line-height: 1.65;
+}
+
+.message-agent .message-content {
+  font-family: 'Hanken Grotesk', var(--vscode-font-family), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
 }
 
 .message-content p {
@@ -524,14 +537,15 @@ html, body, #root {
 .status-bar-container {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   font-size: 11px;
 }
 
 .status-indicator {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  padding: 2px;
 }
 
 .status-dot {
@@ -539,22 +553,43 @@ html, body, #root {
   height: 8px;
   border-radius: 50%;
   display: inline-block;
+  flex-shrink: 0;
+  transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
-.status-label {
-  color: var(--fg-muted);
+.status-dot.thinking {
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
 }
 
 .status-usage {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
   background-color: var(--card-bg);
   border: 1px solid var(--border-color);
-  padding: 2px 6px;
-  border-radius: 3px;
+  padding: 2px 7px;
+  border-radius: 12px;
   color: var(--fg-muted);
   font-size: 10px;
+  font-weight: 500;
+}
+
+.status-usage-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.8;
 }
 
 /* --------------------------------------------------------------------------
@@ -582,7 +617,7 @@ html, body, #root {
   display: flex;
   gap: 6px;
   align-items: center;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
   white-space: nowrap;
 }
 
@@ -611,7 +646,7 @@ html, body, #root {
   border-radius: 6px;
   width: 260px;
   max-height: 320px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -927,12 +962,16 @@ html, body, #root {
   justify-content: center;
   color: var(--fg-muted);
   text-align: center;
-  padding: 20px;
+  padding: 24px;
 }
 
 .file-editor-empty-icon {
-  font-size: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 12px;
+  color: var(--fg-muted);
+  opacity: 0.7;
 }
 
 .file-editor-empty-hint {
@@ -985,16 +1024,27 @@ html, body, #root {
   justify-content: center;
   color: var(--fg-muted);
   text-align: center;
-  padding: 20px;
+  padding: 24px;
 }
 
 .diff-empty-icon {
-  font-size: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
   color: var(--vscode-testing-iconPassed, #4ec9b0);
-  margin-bottom: 10px;
 }
 
 .diff-empty-hint {
   font-size: 11px;
   margin-top: 6px;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin-animate {
+  animation: spin 1s linear infinite;
 }

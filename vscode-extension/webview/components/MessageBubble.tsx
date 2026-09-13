@@ -2,6 +2,7 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ChatMessage } from "../types";
+import { ToolCallCard } from "./ToolCallCard";
 
 interface Props {
   message: ChatMessage;
@@ -46,12 +47,20 @@ export const MessageBubble: React.FC<Props> = ({ message }) => {
           {message.content}
         </ReactMarkdown>
       </div>
+      {message.toolCalls && message.toolCalls.length > 0 && (
+        <div className="message-tool-calls">
+          {message.toolCalls.map((tc, idx) => (
+            <ToolCallCard key={idx} toolCall={tc} />
+          ))}
+        </div>
+      )}
       {message.isStreaming && !message.content && (
         <span className="streaming-cursor">● thinking…</span>
       )}
       {message.isStreaming && message.content && (
-        <span className="streaming-cursor streaming-cursor-inline">▊</span>
+        <span className="streaming-cursor streaming-cursor-inline">▋</span>
       )}
     </div>
   );
 };
+

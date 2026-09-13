@@ -261,16 +261,15 @@ export const ChatPanel: React.FC<Props> = ({ backendUrl, token }) => {
           onNewSession={handleReset}
           onSaveSession={sendSaveSession}
         />
-        <StatusBar status={status} usage={usageInfo} />
+        <StatusBar status={status} usage={usageInfo} isThinking={isThinking} />
       </div>
 
       <div className="chat-messages">
         {messages.length === 0 && (
           <div className="chat-empty">
-            <div className="chat-empty-icon">🤖</div>
-            <p>Send a message to start coding with your agent.</p>
+            <div className="chat-empty-title">Send a message to start coding</div>
             <p className="chat-empty-hint">
-              Try: "Read sample.py and explain what it does"
+              Ask Helix to read, edit, or explain code in your workspace.
             </p>
           </div>
         )}
@@ -295,8 +294,17 @@ export const ChatPanel: React.FC<Props> = ({ backendUrl, token }) => {
           className="chat-send-btn"
           onClick={handleSend}
           disabled={!input.trim() || isThinking || status !== "connected"}
+          title={isThinking ? "Thinking…" : "Send message"}
         >
-          {isThinking ? "⏳" : "→"}
+          {isThinking ? (
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="spin-animate">
+              <path d="M8 2a6 6 0 1 0 6 6" />
+            </svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M8 13V3M3.5 7.5L8 3l4.5 4.5" />
+            </svg>
+          )}
         </button>
       </div>
     </div>

@@ -8,18 +8,35 @@ interface Props {
   selectedPath?: string;
 }
 
-function getFileIcon(name: string): string {
-  if (name.endsWith(".py")) return "🐍";
-  if (name.endsWith(".ts") || name.endsWith(".tsx")) return "🔷";
-  if (name.endsWith(".js") || name.endsWith(".jsx")) return "🟨";
-  if (name.endsWith(".json")) return "⚙️";
-  if (name.endsWith(".md")) return "📝";
-  if (name.endsWith(".html")) return "🌐";
-  if (name.endsWith(".css")) return "🎨";
-  if (name.endsWith(".toml") || name.endsWith(".yaml") || name.endsWith(".yml")) return "🔧";
-  if (name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".svg")) return "🖼️";
-  return "📄";
-}
+const FolderIcon: React.FC = () => (
+  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1.5 3.5h4l1.5 2h7.5v8H1.5v-10z" />
+  </svg>
+);
+
+const FileIcon: React.FC = () => (
+  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 2.5h6.5l3.5 3.5V13.5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-10a1 1 0 0 1 1-1z" />
+    <path d="M9.5 2.5v3.5h3.5" />
+  </svg>
+);
+
+const RefreshIcon: React.FC<{ spinning?: boolean }> = ({ spinning }) => (
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 16 16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={spinning ? "spin-animate" : ""}
+  >
+    <path d="M2 8a6 6 0 1 1 1.76 4.24" />
+    <path d="M2 12V8h4" />
+  </svg>
+);
 
 function formatBytes(bytes?: number): string {
   if (!bytes) return "";
@@ -55,8 +72,8 @@ const TreeNode: React.FC<TreeNodeProps> = ({
           style={{ paddingLeft: `${depth * 14 + 6}px` }}
           onClick={() => setExpanded(!expanded)}
         >
-          <span className="file-tree-arrow">{expanded ? "▼" : "▶"}</span>
-          <span className="file-tree-icon">📁</span>
+          <span className="file-tree-arrow">{expanded ? "▾" : "▸"}</span>
+          <span className="file-tree-icon"><FolderIcon /></span>
           <span className="file-tree-name">{node.name}</span>
         </div>
         {expanded && (
@@ -91,7 +108,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
       onClick={() => onSelectFile(node.path)}
       title={node.path}
     >
-      <span className="file-tree-icon">{getFileIcon(node.name)}</span>
+      <span className="file-tree-icon"><FileIcon /></span>
       <span className="file-tree-name">{node.name}</span>
       {node.size !== undefined && (
         <span className="file-tree-size">{formatBytes(node.size)}</span>
@@ -148,7 +165,7 @@ export const FileTree: React.FC<Props> = ({
             title="Refresh file tree"
             disabled={loading}
           >
-            🔄
+            <RefreshIcon spinning={loading} />
           </button>
         </div>
       </div>
