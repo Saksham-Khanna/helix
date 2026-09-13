@@ -152,6 +152,13 @@ export const FileTree: React.FC<Props> = ({
 
   useEffect(() => {
     fetchFiles();
+    const id = setInterval(fetchFiles, 5000);
+    const onFocus = () => fetchFiles();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+    };
   }, [fetchFiles]);
 
   return (

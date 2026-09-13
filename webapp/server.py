@@ -189,6 +189,13 @@ async def diff(request: Request, authorization: str | None = Header(None)):
     return {"diff": mgr.get_workspace_diff()}
 
 
+index_state = {"status": "idle", "count": 0, "error": None, "started_at": None}
+
+@app.get("/api/index/status")
+async def index_status(request: Request, authorization: str | None = Header(None)):
+    await _verify_token(request, authorization)
+    return index_state
+
 @app.post("/api/index")
 async def index_workspace(request: Request, authorization: str | None = Header(None)):
     await _verify_token(request, authorization)
@@ -197,22 +204,29 @@ async def index_workspace(request: Request, authorization: str | None = Header(N
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": f"Indexing unavailable: {e}"})
 
-    result: dict = {}
+    # If already indexing, return current status
+    if index_state["status"] == "indexing":
+        return {"status": "indexing", "count": index_state["count"]}
+
+    index_state["status"] = "indexing"
+    index_state["error"] = None
+    index_state["started_at"] = __import__("time").time()
+
     def _do_index():
         try:
             count = index_directory(WORKSPACE_ROOT)
-            result["count"] = count
-            result["error"] = None
+            index_state["count"] = count
+            index_state["status"] = "done"
+            index_state["error"] = None
         except Exception as e:
-            result["count"] = 0
-            result["error"] = str(e)
+            index_state["count"] = 0
+            index_state["error"] = str(e)
+            index_state["status"] = "error"
 
     thread = threading.Thread(target=_do_index, daemon=True)
     thread.start()
-    thread.join(timeout=180)
-    if result.get("error"):
-        return JSONResponse(status_code=500, content={"error": result["error"]})
-    return {"count": result.get("count", 0)}
+    # Return immediately — frontend polls /api/index/status
+    return {"status": "indexing", "count": 0}
 
 
 @app.get("/api/files")

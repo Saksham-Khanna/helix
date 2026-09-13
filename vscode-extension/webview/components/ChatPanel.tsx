@@ -23,6 +23,7 @@ export const ChatPanel: React.FC<Props> = ({ backendUrl, token }) => {
   const [pendingApproval, setPendingApproval] = useState<{ id: string; tool: string; args: Record<string, any>; preview: string } | null>(null);
   const [pendingPlan, setPendingPlan] = useState<{ id: string; plan: Record<string, any> | null; markdown: string } | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
+  const [lastEval, setLastEval] = useState<Record<string, any> | null>(null);
   const lastUserMsgRef = useRef<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -112,6 +113,15 @@ export const ChatPanel: React.FC<Props> = ({ backendUrl, token }) => {
 
       case "plan_request":
         setPendingPlan(msg.data as any);
+        break;
+
+      case "eval":
+        setLastEval(msg.data as any);
+        // Also append eval badge as agent message
+        setMessages((prev) => [
+          ...prev,
+          { id: nextId(), role: "agent", content: `⭐ Eval — faithfulness ${(msg.data.scores?.faithfulness ?? 0).toFixed(2)} • relevance ${(msg.data.scores?.relevance ?? 0).toFixed(2)} • completeness ${(msg.data.scores?.completeness ?? 0).toFixed(2)} • groundedness ${(msg.data.scores?.groundedness ?? 0).toFixed(2)} — **${msg.data.quality_level || ""}**\n\n> ${msg.data.reasoning || ""}`, timestamp: Date.now() },
+        ]);
         break;
 
       case "error": {
