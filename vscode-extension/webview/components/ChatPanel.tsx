@@ -277,7 +277,7 @@ export const ChatPanel: React.FC<Props> = ({ backendUrl, token }) => {
           onNewSession={handleReset}
           onSaveSession={sendSaveSession}
         />
-        <StatusBar status={status} usage={usageInfo} isThinking={isThinking} />
+        <StatusBar status={status} usage={usageInfo} isThinking={isThinking} backendUrl={backendUrl} token={token} />
       </div>
 
       {pendingApproval && (

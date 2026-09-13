@@ -40,6 +40,13 @@ export const SessionPicker: React.FC<Props> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [saveName, setSaveName] = useState("");
   const [showSaveInput, setShowSaveInput] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredSessions = sessions.filter((s) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return s.title.toLowerCase().includes(q) || s.session_id.toLowerCase().includes(q) || s.provider.toLowerCase().includes(q);
+  });
 
   const fetchSessions = useCallback(async () => {
     if (!backendUrl) return;
@@ -160,12 +167,24 @@ export const SessionPicker: React.FC<Props> = ({
               <RefreshIcon spinning={loading} />
             </button>
           </div>
+          <div style={{ padding: "4px 6px", borderBottom: "1px solid var(--border-color)" }}>
+            <input
+              type="text"
+              className="file-search-input"
+              placeholder="Search sessions..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
           <div className="session-list">
             {loading && <div className="session-loading">Loading sessions...</div>}
+            {!loading && filteredSessions.length === 0 && sessions.length > 0 && (
+              <div className="session-empty">No matches for "{searchQuery}"</div>
+            )}
             {!loading && sessions.length === 0 && (
               <div className="session-empty">No saved sessions yet</div>
             )}
-            {sessions.map((s) => (
+            {filteredSessions.map((s) => (
               <div
                 key={s.session_id}
                 className={`session-item ${activeSessionId === s.session_id ? "active" : ""}`}
@@ -178,7 +197,8 @@ export const SessionPicker: React.FC<Props> = ({
                   {s.title || s.session_id}
                 </div>
                 <div className="session-item-meta">
-                  <span>{s.turn_count || 0} turns</span>
+                  <span>{s.provider}</span>
+                  <span>• {s.turn_count || 0} turns</span>
                   {s.updated_at && (
                     <span>• {new Date(s.updated_at).toLocaleDateString()}</span>
                   )}
