@@ -5,6 +5,7 @@
 ![Tests](https://img.shields.io/badge/tests-58%20passed-brightgreen)
 ![No Framework](https://img.shields.io/badge/built%20without-LangChain%20%2F%20AutoGen-orange)
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
+![Stars](https://img.shields.io/github/stars/Saksham-Khanna/terminal-assistant?style=social)
 
 > **Claude Code / Cursor / Aider jaise tools kaise kaam karte hain — ye project usko scratch se dikhata hai.** LLM agent loop + tool-calling + RAG, bina kisi agent framework ke. Terminal me direct use karo.
 
