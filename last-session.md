@@ -1,4 +1,4 @@
-# Last Session — 12 Sept 2026 Night
+# Last Session — 13 Sept 2026 Afternoon
 
 ## Current State (Ready for next session)
 
@@ -20,26 +20,40 @@
 
 **RAG:** `python cli.py index` -> 277 chunks indexed, `rag/indexer.py:20` SKIP_DIRS expanded.
 
-## Next Session — New Model via Ollama (User choice)
+## Today 13 Sept — User Asked About Qwen2.5-7B-Instruct-GPTQ-Int4
 
-**User will use `qwen2.5:7b-instruct` (recommended for 16GB RAM) instead of Groq/Gemini.**
-- Pull: `ollama pull qwen2.5:7b-instruct` (also `gemma3:4b` light 3.5GB alternative tried but qwen better for `agent/tools.py:42` tool-calling). `ollama serve` must run.
+- ChatGPT ne suggest kiya: `Qwen2.5-7B-Instruct-GPTQ-Int4`
+- Explained: GPTQ Int4 = 4-bit quantized, ~4-5GB VRAM, local GPU chahiye. Direct API nahi — `transformers + auto-gptq` ya `vLLM` server chahiye. `agent/llm.py:26` me new provider banana padega.
+- Recommendation diya:
+  - Online/free -> Gemini hi rakh (1M ctx, stable)
+  - Offline/private -> GPTQ mat le, Ollama `qwen2.5:7b-instruct` GGUF Q4_K_M le (same quality, 10x easy setup) — `ollama pull qwen2.5:7b-instruct`
+  - Qwen2.5 tool-calling support karta hai par Gemini/Groq se kam reliable, context 32k vs Gemini 1M
+- User ne abhi implement nahi karwaya, next session me decide karega.
+
+## Next Session — New Model via Ollama (User choice pending)
+
+**User will likely use `qwen2.5:7b-instruct` (recommended for 16GB RAM) instead of Groq/Gemini vagy GPTQ direct.**
+- Pull: `ollama pull qwen2.5:7b-instruct` (also `gemma3:4b` light 3.5GB alternative, but qwen better for `agent/tools.py:42` tool-calling). `ollama serve` must run.
 - Code to add: `agent/llm.py:188` `_call_ollama()` via `http://localhost:11434/api/chat` (httpx/urllib, UA header), `agent/config.py:69` `ollama` section (`ollama_model`, `ollama_host`), `.env.example:11` + `.env:4` `MODEL_PROVIDER=ollama OLLAMA_MODEL=qwen2.5:7b-instruct`.
 - Files to touch `model_change.md:50`: `agent/llm.py:26,59,188` + `agent/config.py:69,192` + `webapp/server.py:101` health expose, `tests/test_llm.py` mock.
+- Alternative if user insists on GPTQ-Int4: `pip install auto-gptq optimum` + `vllm serve Qwen/Qwen2.5-7B-Instruct-GPTQ-Int4` -> OpenAI-compatible endpoint.
 
 **Pending (do next session):**
 1. Wire Ollama provider (half-day) + test `ollama run qwen2.5:7b-instruct "list_dir"` via `Agent(MODEL_PROVIDER=ollama).run("say hi")`
 2. `assets/demo.gif` 20s `python cli.py chat` `read_file -> edit_file -> pytest` for `README.md:16` (ScreenToGif / terminalizer)
 3. Rotate keys `https://aistudio.google.com/apikey` + `https://console.groq.com/keys` -> update `.env:2,5`
 4. `git add` unstaged + `git commit` + `git push` (8 files + vsix ignored)
-5. Rebuild `vscode-extension` `npm run build` + `vsce package` already 11.17 MB, reinstall via `Install from VSIX` (direct overwrite, no uninstall needed)
+5. Rebuild `vscode-extension` `npm run build` + `vsce package` already 11.17 MB, reinstall via `Install from VSIX`
 
 ## Quick Switch
 ```bash
 # Gemini (current stable)
 # .env: MODEL_PROVIDER=gemini  LLM_RATE_RPM=5  LLM_MIN_INTERVAL=2
 
-# Ollama local (next session after wiring)
+# Ollama local (next session after wiring) - preferred over GPTQ
 # ollama pull qwen2.5:7b-instruct
 # .env: MODEL_PROVIDER=ollama  OLLAMA_MODEL=qwen2.5:7b-instruct
+
+# GPTQ direct (if insisted, needs 8GB+ VRAM)
+# vllm serve Qwen/Qwen2.5-7B-Instruct-GPTQ-Int4 --port 8001
 ```
