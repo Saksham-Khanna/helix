@@ -225,6 +225,17 @@ class Config:
         """True if GROQ_API_KEY is set."""
         return bool(os.environ.get("GROQ_API_KEY"))
 
+    @property
+    def require_approval(self) -> bool:
+        """True if destructive tools require human approval (via UI)."""
+        val = os.environ.get("HELIX_REQUIRE_APPROVAL") or os.environ.get("AGENT_REQUIRE_APPROVAL") or ""
+        return val.lower() == "true"
+
+    @property
+    def api_token(self) -> str | None:
+        """Optional API token for web backend auth."""
+        return os.environ.get("HELIX_API_TOKEN") or os.environ.get("AGENTIC_API_TOKEN") or None
+
     def validate(self) -> list[str]:
         """Return list of missing critical config warnings."""
         warnings = []

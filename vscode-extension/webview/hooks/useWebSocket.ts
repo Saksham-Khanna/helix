@@ -94,6 +94,10 @@ export function useWebSocket({ url, token, onMessage, onOpen, onClose }: UseWebS
     wsRef.current?.send(JSON.stringify({ type: "save_session", name }));
   }, []);
 
+  const sendApproval = useCallback((id: string, approved: boolean) => {
+    wsRef.current?.send(JSON.stringify({ type: "approval_response", data: { id, approved } }));
+  }, []);
+
   // Connect on mount, disconnect on unmount
   useEffect(() => {
     if (url) { connect(); }
@@ -106,6 +110,7 @@ export function useWebSocket({ url, token, onMessage, onOpen, onClose }: UseWebS
     sendReset,
     sendLoadSession,
     sendSaveSession,
+    sendApproval,
     connect,
     disconnect,
   };

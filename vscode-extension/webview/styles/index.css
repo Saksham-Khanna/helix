@@ -1048,3 +1048,79 @@ html, body, #root {
 .spin-animate {
   animation: spin 1s linear infinite;
 }
+
+/* Approval dialog */
+.approval-dialog {
+  background-color: var(--vscode-editorWidget-background, #252526);
+  border: 1px solid var(--vscode-editorWidget-border, #454545);
+  border-radius: 6px;
+  padding: 12px;
+  margin: 8px 14px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  max-width: 760px;
+  width: calc(100% - 28px);
+  align-self: center;
+}
+.approval-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--vscode-editorWarning-foreground, #cca700);
+  margin-bottom: 6px;
+}
+.approval-tool {
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.approval-preview {
+  background-color: var(--bg-editor);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 8px;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 11px;
+  max-height: 150px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin-bottom: 10px;
+}
+.approval-actions {
+  display: flex;
+  gap: 8px;
+}
+.approval-btn {
+  padding: 6px 14px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+}
+.approval-btn.approve {
+  background-color: var(--primary-accent);
+  color: var(--primary-fg);
+  border-color: var(--primary-accent);
+}
+.approval-btn.deny {
+  background-color: var(--card-bg);
+  color: var(--fg-main);
+}
+.approval-btn:hover {
+  opacity: 0.9;
+}
+.error-retry {
+  margin-top: 6px;
+}
+.error-retry button {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  color: var(--fg-main);
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+}
+.error-retry button:hover {
+  background-color: var(--primary-accent);
+  color: var(--primary-fg);
+}

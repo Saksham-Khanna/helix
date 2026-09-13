@@ -48,6 +48,14 @@ export const DiffViewer: React.FC<Props> = ({
   useEffect(() => {
     if (!hasDirectDiff) {
       fetchWorkspaceDiff();
+      // Auto-refresh every 3s while tab is visible
+      const id = setInterval(fetchWorkspaceDiff, 3000);
+      const onFocus = () => fetchWorkspaceDiff();
+      window.addEventListener("focus", onFocus);
+      return () => {
+        clearInterval(id);
+        window.removeEventListener("focus", onFocus);
+      };
     }
   }, [hasDirectDiff, fetchWorkspaceDiff]);
 

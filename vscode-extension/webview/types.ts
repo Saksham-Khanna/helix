@@ -56,6 +56,11 @@ export interface WsErrorMessage {
   data: string;
 }
 
+export interface WsApprovalRequestMessage {
+  type: "approval_request";
+  data: { id: string; tool: string; args: Record<string, any>; preview: string };
+}
+
 export type WsIncoming =
   | WsTextMessage
   | WsToolMessage
@@ -63,7 +68,8 @@ export type WsIncoming =
   | WsUsageMessage
   | WsDoneMessage
   | WsStatusMessage
-  | WsErrorMessage;
+  | WsErrorMessage
+  | WsApprovalRequestMessage;
 
 // ---- File tree ----
 

@@ -93,6 +93,38 @@ class Agent:
 
         # Observers get notified on tool calls (for external UI)
         self.tool_observers: list = []
+        # Approval flow for destructive tools (web UI)
+        self.require_approval = get_config().require_approval
+        self.approval_callback = None  # set by webapp to (name, args) -> bool
+
+    def _is_approval_required(self, tool_name: str, args: dict) -> bool:
+        if not self.require_approval:
+            return False
+        # Only destructive tools need approval
+        if tool_name not in ("write_file", "edit_file", "run_shell_command", "undo_last_change"):
+            return False
+        # Safe shell commands auto-allowed even with approval on
+        if tool_name == "run_shell_command":
+            cmd = args.get("command", "")
+            from agent.tools import SAFE_COMMAND_PREFIXES
+            if cmd.strip().startswith(SAFE_COMMAND_PREFIXES):
+                return False
+        return True
+
+    def _request_approval(self, tool_name: str, args: dict) -> bool:
+        if not self._is_approval_required(tool_name, args):
+            return True
+        if self.approval_callback:
+            try:
+                return bool(self.approval_callback(tool_name, args))
+            except Exception:
+                return False
+        # CLI fallback: ask via input
+        try:
+            ans = input(f"\n  Agent wants to run {tool_name} {args}\n  Approve? [y/N] ").strip().lower()
+            return ans == "y"
+        except Exception:
+            return False
 
     def _append_user(self, text: str):
         if not self.initial_query:
@@ -392,7 +424,10 @@ class Agent:
                         obs(name, dict(args))
                     except Exception:
                         pass
-                result_text = execute_tool(name, args)
+                if self._is_approval_required(name, args) and not self._request_approval(name, args):
+                    result_text = f"Tool '{name}' blocked by user — approval denied."
+                else:
+                    result_text = execute_tool(name, args)
 
                 # Track RAG context if search_codebase was used
                 if name == "search_codebase" and result_text and not result_text.startswith("Error"):
@@ -440,25 +475,45 @@ class Agent:
             tool_call_line(fc.name, dict(fc.args))
             self.tools_called.append({"name": fc.name, "args": dict(fc.args)})
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-            future_to_fc = {
-                executor.submit(execute_tool, fc.name, dict(fc.args)): fc
-                for fc in function_calls
-            }
-            for future in concurrent.futures.as_completed(future_to_fc):
-                fc = future_to_fc[future]
-                try:
-                    result_text = future.result()
-                except Exception as e:
-                    result_text = f"Error: {e}"
-                if fc.name == "search_codebase" and not result_text.startswith("Error"):
-                    self.context_chunks_used.append(result_text[:500])
-                response_parts.append(
-                    types.Part.from_function_response(
-                        name=fc.name,
-                        response={"result": result_text},
+        # Handle approval-gated tools sequentially, others in parallel
+        approval_denied = []
+        parallel_calls = []
+        for fc in function_calls:
+            args = dict(fc.args)
+            if self._is_approval_required(fc.name, args):
+                if not self._request_approval(fc.name, args):
+                    approval_denied.append(fc)
+                    response_parts.append(
+                        types.Part.from_function_response(
+                            name=fc.name,
+                            response={"result": f"Tool '{fc.name}' blocked by user — approval denied."},
+                        )
                     )
-                )
+                else:
+                    parallel_calls.append(fc)
+            else:
+                parallel_calls.append(fc)
+
+        if parallel_calls:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                future_to_fc = {
+                    executor.submit(execute_tool, fc.name, dict(fc.args)): fc
+                    for fc in parallel_calls
+                }
+                for future in concurrent.futures.as_completed(future_to_fc):
+                    fc = future_to_fc[future]
+                    try:
+                        result_text = future.result()
+                    except Exception as e:
+                        result_text = f"Error: {e}"
+                    if fc.name == "search_codebase" and not result_text.startswith("Error"):
+                        self.context_chunks_used.append(result_text[:500])
+                    response_parts.append(
+                        types.Part.from_function_response(
+                            name=fc.name,
+                            response={"result": result_text},
+                        )
+                    )
 
         self.contents.append(types.Content(role="user", parts=response_parts))
         return None
@@ -487,7 +542,7 @@ class Agent:
         if not tool_calls:
             return content.strip() if content else "(no response)"
 
-        # Execute tools and feed results back
+        # Execute tools and feed results back (with approval)
         import json
         tool_result_msgs = []
         for tc in tool_calls:
@@ -498,7 +553,10 @@ class Agent:
                 args = {}
             tool_call_line(name, args)
             self.tools_called.append({"name": name, "args": args})
-            result_text = execute_tool(name, args)
+            if self._is_approval_required(name, args) and not self._request_approval(name, args):
+                result_text = f"Tool '{name}' blocked by user — approval denied."
+            else:
+                result_text = execute_tool(name, args)
             if name == "search_codebase" and not result_text.startswith("Error"):
                 self.context_chunks_used.append(result_text[:500])
             tool_result_msgs.append({

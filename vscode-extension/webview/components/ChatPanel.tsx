@@ -20,6 +20,9 @@ export const ChatPanel: React.FC<Props> = ({ backendUrl, token }) => {
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [usageInfo, setUsageInfo] = useState("");
+  const [pendingApproval, setPendingApproval] = useState<{ id: string; tool: string; args: Record<string, any>; preview: string } | null>(null);
+  const [lastError, setLastError] = useState<string | null>(null);
+  const lastUserMsgRef = useRef<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const currentAgentMsgRef = useRef<string | null>(null);
@@ -99,10 +102,16 @@ export const ChatPanel: React.FC<Props> = ({ backendUrl, token }) => {
         currentAgentMsgRef.current = null;
         pendingToolCalls.current = [];
         setIsThinking(false);
+        setLastError(null);
+        break;
+
+      case "approval_request":
+        setPendingApproval(msg.data as any);
         break;
 
       case "error": {
         const errText = `\n\n**Error:** ${msg.data}`;
+        setLastError(msg.data);
         if (currentAgentMsgRef.current) {
           setMessages((prev) =>
             prev.map((m) =>
@@ -127,7 +136,7 @@ export const ChatPanel: React.FC<Props> = ({ backendUrl, token }) => {
     }
   }, []);
 
-  const { status, sendChat, sendReset, sendLoadSession, sendSaveSession } = useWebSocket({
+  const { status, sendChat, sendReset, sendLoadSession, sendSaveSession, sendApproval } = useWebSocket({
     url: backendUrl,
     token,
     onMessage: handleWsMessage,
@@ -141,6 +150,8 @@ export const ChatPanel: React.FC<Props> = ({ backendUrl, token }) => {
   const handleSend = useCallback(() => {
     const text = input.trim();
     if (!text || isThinking) { return; }
+    lastUserMsgRef.current = text;
+    setLastError(null);
 
     // Save to history (dedup consecutive)
     if (inputHistory.current[inputHistory.current.length - 1] !== text) {
@@ -264,6 +275,18 @@ export const ChatPanel: React.FC<Props> = ({ backendUrl, token }) => {
         <StatusBar status={status} usage={usageInfo} isThinking={isThinking} />
       </div>
 
+      {pendingApproval && (
+        <div className="approval-dialog">
+          <div className="approval-header">⚠️ Approval required</div>
+          <div className="approval-tool">Tool: <code>{pendingApproval.tool}</code></div>
+          <pre className="approval-preview">{pendingApproval.preview || JSON.stringify(pendingApproval.args, null, 2)}</pre>
+          <div className="approval-actions">
+            <button className="approval-btn approve" onClick={() => { sendApproval(pendingApproval.id, true); setPendingApproval(null); }}>Approve</button>
+            <button className="approval-btn deny" onClick={() => { sendApproval(pendingApproval.id, false); setPendingApproval(null); }}>Deny</button>
+          </div>
+        </div>
+      )}
+
       <div className="chat-messages">
         {messages.length === 0 && (
           <div className="chat-empty">
@@ -276,6 +299,13 @@ export const ChatPanel: React.FC<Props> = ({ backendUrl, token }) => {
         {messages.map((msg) => (
           <MessageBubble key={msg.id} message={msg} />
         ))}
+        {lastError && (
+          <div className="error-retry">
+            <span style={{ fontSize: 11, color: "var(--fg-muted)", marginRight: 8 }}>{lastError.slice(0,120)}</span>
+            <button onClick={() => { if (lastUserMsgRef.current) { setMessages((prev)=>[...prev,{id: nextId(), role:"user", content:lastUserMsgRef.current, timestamp:Date.now()}]); sendChat(lastUserMsgRef.current); setLastError(null); setIsThinking(true); } }}>Retry</button>
+            <button style={{ marginLeft: 6 }} onClick={() => setLastError(null)}>Dismiss</button>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
