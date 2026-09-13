@@ -21,6 +21,7 @@ export const ChatPanel: React.FC<Props> = ({ backendUrl, token }) => {
   const [isThinking, setIsThinking] = useState(false);
   const [usageInfo, setUsageInfo] = useState("");
   const [pendingApproval, setPendingApproval] = useState<{ id: string; tool: string; args: Record<string, any>; preview: string } | null>(null);
+  const [pendingPlan, setPendingPlan] = useState<{ id: string; plan: Record<string, any> | null; markdown: string } | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
   const lastUserMsgRef = useRef<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -109,6 +110,10 @@ export const ChatPanel: React.FC<Props> = ({ backendUrl, token }) => {
         setPendingApproval(msg.data as any);
         break;
 
+      case "plan_request":
+        setPendingPlan(msg.data as any);
+        break;
+
       case "error": {
         const errText = `\n\n**Error:** ${msg.data}`;
         setLastError(msg.data);
@@ -136,7 +141,7 @@ export const ChatPanel: React.FC<Props> = ({ backendUrl, token }) => {
     }
   }, []);
 
-  const { status, sendChat, sendReset, sendLoadSession, sendSaveSession, sendApproval } = useWebSocket({
+  const { status, sendChat, sendReset, sendLoadSession, sendSaveSession, sendApproval, sendPlanApproval } = useWebSocket({
     url: backendUrl,
     token,
     onMessage: handleWsMessage,
@@ -283,6 +288,17 @@ export const ChatPanel: React.FC<Props> = ({ backendUrl, token }) => {
           <div className="approval-actions">
             <button className="approval-btn approve" onClick={() => { sendApproval(pendingApproval.id, true); setPendingApproval(null); }}>Approve</button>
             <button className="approval-btn deny" onClick={() => { sendApproval(pendingApproval.id, false); setPendingApproval(null); }}>Deny</button>
+          </div>
+        </div>
+      )}
+
+      {pendingPlan && (
+        <div className="approval-dialog" style={{ borderColor: "#0e639c" }}>
+          <div className="approval-header">📋 Plan approval required</div>
+          <pre className="approval-preview" style={{ maxHeight: 250 }}>{pendingPlan.markdown}</pre>
+          <div className="approval-actions">
+            <button className="approval-btn approve" onClick={() => { sendPlanApproval(pendingPlan.id, true); setPendingPlan(null); }}>Approve Plan</button>
+            <button className="approval-btn deny" onClick={() => { sendPlanApproval(pendingPlan.id, false); setPendingPlan(null); }}>Deny Plan</button>
           </div>
         </div>
       )}

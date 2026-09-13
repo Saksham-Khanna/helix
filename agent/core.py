@@ -23,6 +23,7 @@ from google.genai import types
 from agent.llm import LLMClient
 from agent.tools import TOOL_SCHEMAS, execute_tool
 from agent.config import get_config
+from agent.planner import READ_TOOLS, PLANNER_SYSTEM, parse_plan, format_plan_markdown, is_planner_enabled
 from agent.summarizer import (
     should_summarize_gemini,
     should_summarize_groq,
@@ -96,6 +97,9 @@ class Agent:
         # Approval flow for destructive tools (web UI)
         self.require_approval = get_config().require_approval
         self.approval_callback = None  # set by webapp to (name, args) -> bool
+        # Planner-Worker
+        self.planner_enabled = is_planner_enabled()
+        self.plan_approval_callback = None  # set by webapp to (plan: dict) -> bool
 
     def _is_approval_required(self, tool_name: str, args: dict) -> bool:
         if not self.require_approval:
@@ -122,6 +126,26 @@ class Agent:
         # CLI fallback: ask via input
         try:
             ans = input(f"\n  Agent wants to run {tool_name} {args}\n  Approve? [y/N] ").strip().lower()
+            return ans == "y"
+        except Exception:
+            return False
+
+    def _request_plan_approval(self, plan: Optional[dict], markdown: str) -> bool:
+        if not self.planner_enabled:
+            return True
+        if self.plan_approval_callback:
+            try:
+                return bool(self.plan_approval_callback(plan, markdown))
+            except Exception:
+                return False
+        # CLI fallback: print plan and ask
+        try:
+            print("\n" + "="*60)
+            print("📋 PLAN PROPOSAL")
+            print("="*60)
+            print(markdown)
+            print("="*60)
+            ans = input("Approve this plan? [y/N] ").strip().lower()
             return ans == "y"
         except Exception:
             return False
@@ -223,6 +247,99 @@ class Agent:
                     self.system,
                 )
 
+    def _generate_plan(self, user_task: str) -> tuple[Optional[dict], str]:
+        """Run a read-only planner loop to produce a JSON plan. Returns (plan, markdown)."""
+        # Use a separate history so we don't pollute main conversation
+        # For simplicity, reuse Agent's llm but with PLANNER_SYSTEM and READ_TOOLS
+        # Keep it to 5 iterations of read/search only
+        from google.genai import types as _types
+        # Build planner messages
+        planner_contents = []
+        planner_groq = []
+        is_openai = self.provider in ("groq", "ollama")
+        # Seed user task
+        if is_openai:
+            planner_groq.append({"role": "user", "content": user_task})
+        else:
+            planner_contents.append(_types.Content(role="user", parts=[_types.Part.from_text(text=user_task)]))
+
+        plan_text = ""
+        for _ in range(5):
+            # Call LLM with planner system and read-only tools
+            if self.provider == "groq":
+                self.llm.set_groq_messages(planner_groq)
+            elif self.provider == "ollama":
+                if hasattr(self.llm, "set_ollama_messages"):
+                    self.llm.set_ollama_messages(planner_groq)
+                else:
+                    self.llm.set_groq_messages(planner_groq)
+            try:
+                response = self.llm.call(
+                    contents=planner_contents if not is_openai else [],
+                    system=PLANNER_SYSTEM,
+                    tools=READ_TOOLS,
+                )
+            except Exception as e:
+                plan_text = f"Planner error: {e}"
+                break
+
+            # Parse response
+            if is_openai:
+                # Groq/Ollama shape
+                msg = response.get("choices", [{}])[0].get("message", {})
+                text = msg.get("content") or ""
+                tool_calls = msg.get("tool_calls") or []
+                # If no tool calls, this is the plan JSON
+                if not tool_calls:
+                    plan_text = text
+                    break
+                # Execute read tools only
+                # Append assistant msg
+                planner_groq.append({"role": "assistant", "content": text, "tool_calls": [{"id": tc["id"], "type": "function", "function": {"name": tc["function"]["name"], "arguments": tc["function"]["arguments"]}} for tc in tool_calls]})
+                for tc in tool_calls:
+                    name = tc["function"]["name"]
+                    try:
+                        args = json.loads(tc["function"]["arguments"])
+                    except Exception:
+                        args = {}
+                    if name not in ("read_file", "read_file_range", "list_dir", "grep_search", "find_files_by_glob", "search_codebase"):
+                        result = f"Tool '{name}' not allowed in planner — use only read/search tools."
+                    else:
+                        result = execute_tool(name, args)
+                    planner_groq.append({"role": "tool", "tool_call_id": tc["id"], "content": result})
+                    # Also track context
+                    if name == "search_codebase" and not result.startswith("Error"):
+                        self.context_chunks_used.append(result[:500])
+            else:
+                # Gemini
+                cand = response.candidates[0]
+                content = cand.content
+                fcs = [p.function_call for p in content.parts if getattr(p, "function_call", None)]
+                if not fcs:
+                    # Plain text => plan
+                    plan_text = "\n".join([p.text for p in content.parts if getattr(p, "text", None)])
+                    break
+                planner_contents.append(content)
+                parts = []
+                for fc in fcs:
+                    name = fc.name
+                    args = dict(fc.args)
+                    if name not in ("read_file", "read_file_range", "list_dir", "grep_search", "find_files_by_glob", "search_codebase"):
+                        result = f"Tool '{name}' not allowed in planner — use only read/search tools."
+                    else:
+                        result = execute_tool(name, args)
+                        if name == "search_codebase" and not result.startswith("Error"):
+                            self.context_chunks_used.append(result[:500])
+                    parts.append(_types.Part.from_function_response(name=name, response={"result": result}))
+                planner_contents.append(_types.Content(role="user", parts=parts))
+
+        plan = parse_plan(plan_text or "") if plan_text else None
+        if plan:
+            md = format_plan_markdown(plan)
+            return plan, md
+        # Fallback: treat whole text as plan markdown
+        return None, plan_text or "No plan generated."
+
     def run(self, user_task: str) -> tuple[str, Optional[EvaluationResult]]:
         """
         Run agent with evaluation.
@@ -233,6 +350,13 @@ class Agent:
         self._append_user(user_task)
         self.context_chunks_used = []
         self.tools_called = []
+
+        # Planner-Worker: generate plan and ask approval before any edits
+        if self.planner_enabled:
+            plan, md = self._generate_plan(user_task)
+            if not self._request_plan_approval(plan, md):
+                return "Plan denied by user — no changes made.", None
+            self._append_user(f"Approved plan to execute:\n{md}\n\nProceed step by step, using edit_file/write_file/run_shell_command as needed.")
 
         for iteration in range(1, MAX_ITERATIONS + 1):
             self._iteration = iteration
@@ -286,6 +410,16 @@ class Agent:
         self._append_user(user_task)
         self.context_chunks_used = []
         self.tools_called = []
+
+        # Planner-Worker for streaming: generate plan, yield it, await approval
+        if self.planner_enabled:
+            plan, md = self._generate_plan(user_task)
+            yield f"📋 **PLAN PROPOSAL**\n\n{md}\n\n_Awaiting approval..._\n"
+            if not self._request_plan_approval(plan, md):
+                yield "Plan denied by user — no changes made."
+                return
+            self._append_user(f"Approved plan to execute:\n{md}\n\nProceed step by step.")
+            yield f"✅ Plan approved — executing...\n\n"
 
         for iteration in range(1, MAX_ITERATIONS + 1):
             self._maybe_summarize()

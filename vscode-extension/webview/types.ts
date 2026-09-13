@@ -61,6 +61,11 @@ export interface WsApprovalRequestMessage {
   data: { id: string; tool: string; args: Record<string, any>; preview: string };
 }
 
+export interface WsPlanRequestMessage {
+  type: "plan_request";
+  data: { id: string; plan: Record<string, any> | null; markdown: string };
+}
+
 export type WsIncoming =
   | WsTextMessage
   | WsToolMessage
@@ -69,7 +74,8 @@ export type WsIncoming =
   | WsDoneMessage
   | WsStatusMessage
   | WsErrorMessage
-  | WsApprovalRequestMessage;
+  | WsApprovalRequestMessage
+  | WsPlanRequestMessage;
 
 // ---- File tree ----
 

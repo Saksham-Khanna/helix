@@ -98,6 +98,10 @@ export function useWebSocket({ url, token, onMessage, onOpen, onClose }: UseWebS
     wsRef.current?.send(JSON.stringify({ type: "approval_response", data: { id, approved } }));
   }, []);
 
+  const sendPlanApproval = useCallback((id: string, approved: boolean) => {
+    wsRef.current?.send(JSON.stringify({ type: "plan_response", data: { id, approved } }));
+  }, []);
+
   // Connect on mount, disconnect on unmount
   useEffect(() => {
     if (url) { connect(); }
@@ -111,6 +115,7 @@ export function useWebSocket({ url, token, onMessage, onOpen, onClose }: UseWebS
     sendLoadSession,
     sendSaveSession,
     sendApproval,
+    sendPlanApproval,
     connect,
     disconnect,
   };

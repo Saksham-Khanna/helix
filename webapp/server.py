@@ -171,6 +171,7 @@ async def health(request: Request):
         "host_warning": host_warning,
         "read_only": get_config().is_read_only,
         "require_approval": os.environ.get("HELIX_REQUIRE_APPROVAL", "false").lower() == "true",
+        "planner_enabled": (os.environ.get("HELIX_PLANNER") or os.environ.get("AGENT_PLANNER") or "false").lower() == "true",
     }
 
 
@@ -307,9 +308,31 @@ def _agent_stream(agent: Agent, message: str, queue: asyncio.Queue, loop: asynci
                 pass
             return False
 
+    def _plan_approval_callback(plan: dict | None, markdown: str) -> bool:
+        import uuid
+        req_id = uuid.uuid4().hex[:8]
+        try:
+            loop.call_soon_threadsafe(queue.put_nowait, ("plan_request", {"id": req_id, "plan": plan, "markdown": markdown}))
+        except Exception:
+            return False
+        try:
+            result = approval_responses.get(timeout=180)
+            if isinstance(result, dict) and result.get("id") == req_id:
+                return bool(result.get("approved"))
+            return bool(result.get("approved", False))
+        except Exception:
+            try:
+                loop.call_soon_threadsafe(queue.put_nowait, ("error", "Plan approval timeout — blocked."))
+            except Exception:
+                pass
+            return False
+
     # Wire approval if required
     if agent.require_approval:
         agent.approval_callback = _approval_callback
+    # Wire planner approval if enabled
+    if agent.planner_enabled:
+        agent.plan_approval_callback = _plan_approval_callback
 
     agent.tool_observers.append(_on_tool)
     try:
@@ -347,8 +370,8 @@ async def chat(ws: WebSocket):
             data = await ws.receive_json()
             msg_type = data.get("type", "chat")
 
-            if msg_type == "approval_response":
-                # Frontend approved/denied a tool
+            if msg_type in ("approval_response", "plan_response"):
+                # Frontend approved/denied a tool or plan
                 try:
                     approval_responses.put_nowait(data.get("data", {}))
                 except Exception:
@@ -374,6 +397,9 @@ async def chat(ws: WebSocket):
                     kind, payload = await queue.get()
                     if kind == "approval_request":
                         await ws.send_json({"type": "approval_request", "data": payload})
+                        continue
+                    if kind == "plan_request":
+                        await ws.send_json({"type": "plan_request", "data": payload})
                         continue
                     if kind == "chunk":
                         msg = _serialize_chunk(payload)
