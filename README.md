@@ -15,7 +15,9 @@
 
 ## Demo
 
-> GIF / Screen recording yahan add karo — `agentic chat` me ek bug fix ka 20-sec demo
+![Helix Demo](assets/demo.gif)
+
+*20s — `python cli.py chat` — `read_file` → `edit_file` (diff) → `pytest` — `qwen2.5:7b` local*
 
 ```bash
 python cli.py chat
