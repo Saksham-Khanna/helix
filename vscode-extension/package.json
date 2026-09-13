@@ -1,6 +1,6 @@
 {
   "name": "helix-terminal-assistant",
-  "displayName": "Helix",
+  "displayName": "Helix Terminal AI",
   "description": "Helix — AI coding assistant with chat, file editing, diff view — powered by your own agent backend",
   "version": "0.2.0",
   "publisher": "Helix-ai",
