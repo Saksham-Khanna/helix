@@ -6,6 +6,8 @@
 ![No Framework](https://img.shields.io/badge/built%20without-LangChain%20%2F%20AutoGen-orange)
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
 ![Stars](https://img.shields.io/github/stars/Saksham-Khanna/terminal-assistant?style=social)
+[![VS Marketplace](https://img.shields.io/visual-studio-marketplace/v/Sakshamm-Khanna.helix-terminal-ai?label=VS%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=Sakshamm-Khanna.helix-terminal-ai)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/Sakshamm-Khanna.helix-terminal-ai)](https://marketplace.visualstudio.com/items?itemName=Sakshamm-Khanna.helix-terminal-ai)
 
 > **Claude Code / Cursor / Aider jaise tools kaise kaam karte hain — ye project usko scratch se dikhata hai.** LLM agent loop + tool-calling + RAG, bina kisi agent framework ke. Terminal me direct use karo.
 

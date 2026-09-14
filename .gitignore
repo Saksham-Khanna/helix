@@ -15,3 +15,4 @@ vscode-extension/node_modules/
 vscode-extension/out/
 vscode-extension/*.vsix
 vscode-extension/media/publisher-logo*.png
+!vscode-extension/media/icon.png

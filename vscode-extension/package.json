@@ -1,9 +1,14 @@
 {
-  "name": "helix-terminal-assistant",
-  "displayName": "Helix Terminal AI",
+  "name": "helix-terminal-ai",
+  "displayName": "Helix AI - Terminal Assistant",
   "description": "Helix — AI coding assistant with chat, file editing, diff view — powered by your own agent backend",
-  "version": "0.2.0",
-  "publisher": "Helix-ai",
+  "version": "0.2.1",
+  "publisher": "Sakshamm-Khanna",
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#0e0e14",
+    "theme": "dark"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/Saksham-Khanna/terminal-assistant"
