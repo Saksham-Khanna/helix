@@ -342,7 +342,8 @@ export const ChatPanel: React.FC<Props> = ({ backendUrl, token }) => {
           value={input}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          placeholder={isThinking ? "Agent is thinking…" : "Ask the agent… (Shift+Enter for new line)"}
+          placeholder={isThinking ? "Agent is thinking…" : "Ask the agent…"}
+          title="Shift+Enter for new line, Enter to send"
           disabled={status !== "connected"}
           rows={1}
         />

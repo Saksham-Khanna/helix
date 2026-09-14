@@ -253,7 +253,19 @@ html, body, #root {
   max-height: 150px;
   line-height: 1.5;
   outline: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.chat-input::placeholder {
+  color: var(--fg-muted);
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chat-input:focus {

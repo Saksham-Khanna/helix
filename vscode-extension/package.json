@@ -2,7 +2,7 @@
   "name": "helix-terminal-ai",
   "displayName": "Helix AI - Terminal Assistant",
   "description": "Helix — AI coding assistant with chat, file editing, diff view — powered by your own agent backend",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "publisher": "Sakshamm-Khanna",
   "icon": "media/icon.png",
   "galleryBanner": {
