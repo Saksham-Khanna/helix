@@ -16,3 +16,6 @@ vscode-extension/out/
 vscode-extension/*.vsix
 vscode-extension/media/publisher-logo*.png
 !vscode-extension/media/icon.png
+last_session.md
+last-session.md
+model_change.md
