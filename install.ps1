@@ -104,13 +104,13 @@ if ($UsePipx) {
 try {
     $ver = agentic --version 2>&1 | Select-Object -First 1
     if ($LASTEXITCODE -eq 0) {
-        Write-Info "✓ agentic installed: $ver"
+        Write-Info "agentic installed: $ver"
     }
 } catch {
     Write-Warn "Installed but 'agentic' not in PATH. Add Python Scripts to PATH:"
     $UserBase = & $Python -m site --user-base 2>&1
     Write-Host "  $UserBase\Scripts" -ForegroundColor Yellow
-    Write-Host '  Run: $env:PATH += ";$UserBase\Scripts"' -ForegroundColor Yellow
+    Write-Host '  Run: $env:PATH += $UserBase\Scripts' -ForegroundColor Yellow
 }
 
 Write-Host ""
