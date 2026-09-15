@@ -1,0 +1,5 @@
+# Ensure shell scripts always use LF (fix pipefail error on Windows)
+install text eol=lf
+install.ps1 text eol=lf
+*.sh text eol=lf
+*.py text eol=lf
