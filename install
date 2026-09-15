@@ -168,7 +168,7 @@ fi
 cat <<EOF
 
 ${GREEN}Done! Next steps:${NC}
-  1. ${YELLOW}agentic setup${NC}          # Gemini/Groq API key wizard
+  1. ${YELLOW}agentic setup${NC}          # Gemini/Groq/Ollama wizard (Ollama: no key, local)
   2. ${YELLOW}agentic index${NC}          # index your project for RAG search
   3. ${YELLOW}agentic chat${NC}           # start coding
 

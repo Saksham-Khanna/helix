@@ -115,7 +115,7 @@ try {
 
 Write-Host ""
 Write-Host "Done! Next steps:" -ForegroundColor Green
-Write-Host '  1. agentic setup          # Gemini/Groq API key wizard' -ForegroundColor Yellow
+Write-Host '  1. agentic setup          # Gemini/Groq/Ollama wizard (Ollama: no key)' -ForegroundColor Yellow
 Write-Host '  2. agentic index          # index your project' -ForegroundColor Yellow
 Write-Host '  3. agentic chat           # start coding' -ForegroundColor Yellow
 Write-Host ""

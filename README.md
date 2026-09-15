@@ -11,7 +11,7 @@
 
 > **Claude Code / Cursor / Aider jaise tools kaise kaam karte hain — ye project usko scratch se dikhata hai.** LLM agent loop + tool-calling + RAG, bina kisi agent framework ke. Terminal me direct use karo.
 
-**No credit card, no cost — Google Gemini free tier + Groq free tier pe chalta hai.**
+**No credit card, no cost — Gemini free tier + Groq free tier + Ollama local (qwen2.5:7b) pe chalta hai.**
 
 ---
 
@@ -38,7 +38,7 @@ python cli.py chat
 | **RAG Search** | AST-aware chunking (Tree-sitter) + `sentence-transformers` + Chroma vector store (`rag/indexer.py`, `rag/search.py`) |
 | **Safety** | Project-root guard (`agent/tools.py:25` `AGENT_WORKSPACE` + `AGENT_READ_ONLY`), path-traversal block, Docker sandbox (`agent/sandbox.py:116`), auto-lint after edits (`agent/tools.py:360`) |
 | **Session & Undo** | Save/resume conversations (`agent/session.py`), git shadow commits + instant `/undo` / `/diff` (`agent/checkpoint.py:100`) |
-| **Config** | `agentic.toml` + `.env` layered config, `agentic setup` wizard (`cli.py:92`), multi-provider (Gemini/Groq) (`agent/llm.py:141`) |
+| **Config** | `agentic.toml` + `.env` layered config, `agentic setup` wizard (`cli.py:92`), multi-provider (Gemini/Groq/Ollama) (`agent/llm.py:141`) |
 | **Cost Tracking** | Token + cost per call (`agent/cost.py`), `/stats` |
 
 ---
@@ -49,7 +49,7 @@ python cli.py chat
 cli.py                  Entry point (index / chat / sessions / undo / diff / run)
 agent/
   core.py               Agent loop: LLM -> tool_use? -> execute -> repeat
-  llm.py                Thin wrapper around Gemini & Groq APIs
+  llm.py                Thin wrapper around Gemini / Groq / Ollama APIs
   tools.py              Tool schemas + implementations (file I/O, grep, glob, shell, RAG)
   diff.py               Diff/patch editing: edit_file tool + unified-diff previews
   summarizer.py         Context-window summarization
@@ -122,7 +122,7 @@ Har final answer auto-evaluate hota hai:
 
 | Layer | Tech |
 |---|---|
-| LLM | `google-genai` (Gemini 2.0 Flash), Groq API (`httpx` + `urllib`) |
+| LLM | `google-genai` (Gemini 2.0 Flash), Groq API (`httpx` + `urllib`), Ollama local (`qwen2.5:7b` via `http://localhost:11434`) |
 | RAG | `chromadb`, `sentence-transformers`, `tree-sitter` (+ python/js/java/go/rust) |
 | CLI | `click`, `rich` (tables, diffs, spinners) |
 | Sandbox | `docker` (optional, auto-fallback to subprocess) |
@@ -195,9 +195,10 @@ VERSION=0.1.0 curl -fsSL https://raw.githubusercontent.com/Saksham-Khanna/termin
 
 ```bash
 cp .env.example .env
-# .env me GEMINI_API_KEY ya GROQ_API_KEY dalo
+# .env me GEMINI_API_KEY / GROQ_API_KEY / ya Ollama (local, no key) dalo
 # Free Gemini key: https://aistudio.google.com/apikey
 # Free Groq key: https://console.groq.com
+# Ollama: ollama pull qwen2.5:7b && MODEL_PROVIDER=ollama
 
 agentic setup     # provider + API key wizard (also creates agentic.toml)
 agentic init      # sessions + .env scaffold (workspace legacy)
@@ -279,7 +280,7 @@ Intentionally `LangChain / AutoGen` nahi use kiya — taaki har piece (loop, too
 
 ## Resume Bullet (copy-paste)
 
-> **Helix — Terminal Coding Agent (like Claude Code)** — Built LLM agent loop from scratch without frameworks: tool-calling with 10 tools, streaming, AST-aware RAG (Chroma + sentence-transformers + Tree-sitter), session persistence & git checkpoint undo, Docker-sandboxed execution, guardrails + LLM-as-judge evals (faithfulness/relevance/completeness/groundedness). Python, Gemini/Groq, 58 tests.
+> **Helix — Terminal Coding Agent (like Claude Code)** — Built LLM agent loop from scratch without frameworks: tool-calling with 10 tools, streaming, AST-aware RAG (Chroma + sentence-transformers + Tree-sitter), session persistence & git checkpoint undo, Docker-sandboxed execution, guardrails + LLM-as-judge evals (faithfulness/relevance/completeness/groundedness). Python, Gemini/Groq/Ollama (qwen2.5:7b local), 58 tests.
 
 ---
 
