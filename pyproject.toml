@@ -10,7 +10,7 @@ readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
 authors = [
-    {name = "Your Name", email = "you@example.com"}
+    {name = "Saksham Khanna", email = "saksham@example.com"}
 ]
 keywords = ["ai", "coding-agent", "rag", "llm", "gemini", "groq", "helix"]
 classifiers = [
@@ -60,7 +60,9 @@ agentic = "agentic_ide.cli:entry"
 helix = "agentic_ide.cli:entry"
 
 [project.urls]
-Repository = "https://github.com/yourusername/helix"
+Repository = "https://github.com/Saksham-Khanna/terminal-assistant"
+Homepage = "https://github.com/Saksham-Khanna/terminal-assistant#readme"
+Issues = "https://github.com/Saksham-Khanna/terminal-assistant/issues"
 
 [tool.setuptools.packages.find]
 include = ["agent*", "rag*", "agentic_ide*", "webapp*"]

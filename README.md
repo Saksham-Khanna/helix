@@ -131,25 +131,84 @@ Har final answer auto-evaluate hota hai:
 
 ---
 
-## Setup
+## Install
+
+The easiest way is the install script (like `opencode`):
 
 ```bash
-python -m venv venv
-# Windows: venv\Scripts\activate | Linux/Mac: source venv/bin/activate
-pip install -r requirements.txt
+curl -fsSL https://raw.githubusercontent.com/Saksham-Khanna/terminal-assistant/main/install | bash
+# verify
+agentic --version
+```
 
+Other methods:
+
+**Using pipx (recommended, isolated):**
+```bash
+pipx install git+https://github.com/Saksham-Khanna/terminal-assistant.git
+# specific version
+pipx install git+https://github.com/Saksham-Khanna/terminal-assistant.git@v0.1.0
+```
+
+**Using pip:**
+```bash
+pip install git+https://github.com/Saksham-Khanna/terminal-assistant.git
+# after PyPI publish:
+pip install helix
+```
+
+**Using npm (VS Code extension companion - optional):**
+```bash
+npm install -g helix-terminal-ai  # if npm wrapper published
+```
+
+**Using Homebrew (macOS/Linux - after tap publish):**
+```bash
+brew tap Saksham-Khanna/tap
+brew install helix
+```
+
+**Using Docker:**
+```bash
+docker run -it --rm -v $(pwd):/workspace ghcr.io/saksham-khanna/helix chat
+# or build locally
+docker build -t helix .
+docker run -it helix agentic chat
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/Saksham-Khanna/terminal-assistant/main/install.ps1 | iex
+# or with pip
+pip install git+https://github.com/Saksham-Khanna/terminal-assistant.git
+```
+
+> Installer auto-detects `python3`/`pipx`/`pip`, installs to `~/.local/bin`, and adds to `PATH` in `~/.bashrc`/`~/.zshrc`. Use `--no-modify-path` to skip.
+
+**Install a specific version:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/Saksham-Khanna/terminal-assistant/main/install | bash -s -- --version 0.1.0
+VERSION=0.1.0 curl -fsSL https://raw.githubusercontent.com/Saksham-Khanna/terminal-assistant/main/install | bash
+```
+
+### Setup (after install)
+
+```bash
 cp .env.example .env
 # .env me GEMINI_API_KEY ya GROQ_API_KEY dalo
 # Free Gemini key: https://aistudio.google.com/apikey
 # Free Groq key: https://console.groq.com
+
+agentic setup     # provider + API key wizard (also creates agentic.toml)
+agentic init      # sessions + .env scaffold (workspace legacy)
 ```
 
-Or one-shot:
-
+Dev / local editable install:
 ```bash
+python -m venv venv
+# Windows: venv\Scripts\activate | Linux/Mac: source venv/bin/activate
+pip install -r requirements.txt
 pip install -e .
-agentic init      # sessions + .env scaffold (workspace legacy)
-agentic setup     # provider + API key wizard
 ```
 
 ---
