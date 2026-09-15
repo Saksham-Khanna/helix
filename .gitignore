@@ -15,7 +15,16 @@ vscode-extension/node_modules/
 vscode-extension/out/
 vscode-extension/*.vsix
 vscode-extension/media/publisher-logo*.png
+# Images - ignore generated/portfolio images (keep required extension icon + demo)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.svg
 !vscode-extension/media/icon.png
+!vscode-extension/media/icon.svg
+!assets/demo.gif
 last_session.md
 last-session.md
 model_change.md
