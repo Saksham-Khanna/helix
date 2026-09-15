@@ -133,7 +133,7 @@ Har final answer auto-evaluate hota hai:
 
 ## Install
 
-The easiest way is the install script (like `opencode`):
+The easiest way is the install script:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Saksham-Khanna/terminal-assistant/main/install | bash
